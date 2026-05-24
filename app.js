@@ -192,7 +192,14 @@ function extractPackInfo(product) {
   return null;
 }
 
-function findCheapest(products, parsed) {
+function nameMatchesQuery(name, query) {
+  const nameLc = name.toLowerCase();
+  const words = query.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+  if (!words.length) return true;
+  return words.some(w => nameLc.includes(w));
+}
+
+function findCheapest(products, parsed, searchTerm) {
   const { amountBase, unitType } = parsed;
   const candidates = [];
 
@@ -200,12 +207,15 @@ function findCheapest(products, parsed) {
     const price = extractPrice(p);
     if (!price || price <= 0) continue;
 
+    const name = productName(p);
+    if (!nameMatchesQuery(name, searchTerm)) continue;
+
     const packInfo = extractPackInfo(p);
     if (!packInfo || packInfo.unitType !== unitType) continue;
 
     const packsNeeded = Math.ceil(amountBase / packInfo.qty);
     candidates.push({
-      name: productName(p), price, url: productUrl(p),
+      name, price, url: productUrl(p),
       packsNeeded, total: packsNeeded * price,
       unitLabel: packInfo.label,
     });
@@ -307,7 +317,7 @@ async function run() {
       log(`  Found ${products.length} products`, 'ok');
 
       // Find cheapest for required amount
-      const best = findCheapest(products, parsed);
+      const best = findCheapest(products, parsed, searchTerm);
       if (!best) {
         log(`  ✗ No product matched the unit type (${parsed.unitType})`, 'warn');
         if (products.length) {
