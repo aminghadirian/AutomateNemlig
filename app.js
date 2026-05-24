@@ -422,8 +422,6 @@ function renderResults(rows, skipped) {
     note.hidden = true;
   }
 
-  document.getElementById('openAllBtn').hidden = false;
-  document.getElementById('openSearchBtn').hidden = false;
   section.hidden = false;
 }
 
@@ -439,9 +437,17 @@ function openAllInTabs(rows) {
   }
 }
 
-function openSearchTabs(rows) {
-  for (const { searchTerm } of rows) {
-    window.open(`${BASE}/s?query=${encodeURIComponent(searchTerm)}`, '_blank', 'noopener');
+function openSearchTabs() {
+  const lines = document.getElementById('list').value
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) {
+    showBanner('Enter items in the shopping list first.', 'warning');
+    return;
+  }
+  for (const line of lines) {
+    const parsed = parseShoppingLine(line);
+    const term = parsed ? parsed.name : line;
+    window.open(`${BASE}/s?query=${encodeURIComponent(term)}`, '_blank', 'noopener');
   }
 }
 
@@ -449,5 +455,5 @@ function openSearchTabs(rows) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openAllBtn').addEventListener('click', () => openAllInTabs(lastRows));
-  document.getElementById('openSearchBtn').addEventListener('click', () => openSearchTabs(lastRows));
+  document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
 });
