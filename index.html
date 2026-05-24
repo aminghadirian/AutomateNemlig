@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nemlig Price Finder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 0 1-8 0"/>
+  </svg>
+  Nemlig Price Finder
+</header>
+
+<main>
+
+  <!-- CORS / error banner -->
+  <div id="banner" class="banner error" hidden></div>
+
+  <!-- Shopping list -->
+  <div class="card">
+    <h2>Shopping list</h2>
+    <div class="field">
+      <label for="list">One item per line &mdash; amount first, then item name</label>
+      <textarea id="list" spellcheck="false" placeholder="2L milk&#10;12 eggs&#10;500g smør&#10;1kg Kartoffeln&#10;3 stk avocado"></textarea>
+    </div>
+    <p class="hint">
+      Supported units: <strong>g, kg, ml, cl, dl, L, stk, pcs</strong><br>
+      Enter item names in Danish.
+    </p>
+  </div>
+
+  <button id="findBtn">Find cheapest prices</button>
+  <button id="openAllBtn">Open all in Nemlig</button>
+  <button id="openSearchBtn">Search all in Nemlig</button>
+
+  <div id="log" role="log" aria-live="polite"></div>
+
+  <!-- Results -->
+  <div id="resultsSection" class="card" hidden>
+    <h2>Results</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Needed</th>
+            <th>Best product</th>
+            <th>Pack size</th>
+            <th style="text-align:right">Packs</th>
+            <th style="text-align:right">Pack price</th>
+            <th style="text-align:right">Total</th>
+          </tr>
+        </thead>
+        <tbody id="resultsTbody"></tbody>
+      </table>
+    </div>
+    <p id="skippedNote" class="skipped-note" hidden></p>
+  </div>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
