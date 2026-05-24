@@ -362,6 +362,7 @@ async function run() {
       );
     } else {
       renderResults(rows, skipped);
+      openAllInTabs(rows);
     }
 
     log(rows.length ? `Done — ${rows.length} item(s) matched.` : 'Done (0 items matched).', rows.length ? 'ok' : 'warn');
@@ -422,6 +423,7 @@ function renderResults(rows, skipped) {
   }
 
   document.getElementById('openAllBtn').hidden = false;
+  document.getElementById('openSearchBtn').hidden = false;
   section.hidden = false;
 }
 
@@ -437,8 +439,15 @@ function openAllInTabs(rows) {
   }
 }
 
+function openSearchTabs(rows) {
+  for (const { searchTerm } of rows) {
+    window.open(`${BASE}/s?query=${encodeURIComponent(searchTerm)}`, '_blank', 'noopener');
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openAllBtn').addEventListener('click', () => openAllInTabs(lastRows));
+  document.getElementById('openSearchBtn').addEventListener('click', () => openSearchTabs(lastRows));
 });
