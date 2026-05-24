@@ -231,6 +231,7 @@ button#findBtn.loading::before {
 .log-ok    { color: var(--green); }
 .log-warn  { color: var(--warning); }
 .log-error { color: var(--danger); }
+#log a     { color: var(--green); text-decoration: underline; }
 
 @media (max-width: 400px) {
   table { font-size: .78rem; }

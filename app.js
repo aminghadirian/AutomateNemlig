@@ -232,12 +232,20 @@ function findCheapest(products, parsed, searchTerm) {
 }
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────
-function log(msg, type = 'info') {
+function log(msg, type = 'info', url = null) {
   const panel = document.getElementById('log');
   panel.classList.add('active');
   const div = document.createElement('div');
   div.className = `log-${type}`;
   div.textContent = msg;
+  if (url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.textContent = ' → nemlig.com';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    div.appendChild(a);
+  }
   panel.appendChild(div);
   panel.scrollTop = panel.scrollHeight;
 }
@@ -327,8 +335,7 @@ async function run() {
         continue;
       }
 
-      const link = best.url ? `\n      ${best.url}` : '';
-      log(`  ✓ Best: ${best.name} — ${best.total.toFixed(2)} kr (${best.packsNeeded}×${best.price.toFixed(2)} kr)${link}`, 'ok');
+      log(`  ✓ Best: ${best.name} — ${best.total.toFixed(2)} kr (${best.packsNeeded}×${best.price.toFixed(2)} kr)`, 'ok', best.url || null);
       rows.push({ line, parsed, searchTerm, best });
     }
 
