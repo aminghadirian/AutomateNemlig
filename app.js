@@ -494,7 +494,6 @@ async function run() {
       );
     } else {
       renderResults(rows, skipped);
-      rows.forEach(r => { if (r.best.url) window.open(r.best.url, '_blank', 'noopener'); });
     }
 
     log(rows.length ? `Done — ${rows.length} item(s) matched.` : 'Done (0 items matched).', rows.length ? 'ok' : 'warn');
@@ -553,6 +552,10 @@ function renderResults(rows, skipped) {
   } else {
     note.hidden = true;
   }
+
+  const openBtn = document.getElementById('openResultsBtn');
+  openBtn.textContent = `Open ${rows.length} result${rows.length !== 1 ? 's' : ''} in Nemlig`;
+  openBtn.hidden = false;
 
   section.hidden = false;
 }
@@ -639,4 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('cookidooBtn').addEventListener('click', reformatAndTranslate);
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
+  document.getElementById('openResultsBtn').addEventListener('click', () => {
+    lastRows.forEach(r => { if (r.best.url) window.open(r.best.url, '_blank', 'noopener'); });
+  });
 });
