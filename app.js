@@ -122,6 +122,116 @@ function extractProductList(data) {
   return [];
 }
 
+// ── Translation dictionary (EN/DE → DA) ───────────────────────────────────────
+const TRANSLATIONS = {
+  // English → Danish
+  'milk':'mælk','whole milk':'sødmælk','semi-skimmed milk':'letmælk',
+  'skimmed milk':'skummetmælk','butter':'smør','cream':'fløde',
+  'heavy cream':'piskefløde','whipping cream':'piskefløde',
+  'sour cream':'creme fraiche','yogurt':'yoghurt','yoghurt':'yoghurt',
+  'cream cheese':'flødeost','cheese':'ost','parmesan':'parmesan',
+  'parmesan cheese':'parmesanost','mozzarella':'mozzarella',
+  'goat cheese':'gedeost',"goat's cheese":'gedeost',
+  'feta':'feta','ricotta':'ricotta','mascarpone':'mascarpone',
+  'egg':'æg','eggs':'æg',
+  'chicken':'kylling','chicken breast':'kyllingebryst',
+  'chicken thigh':'kyllingelår','chicken thighs':'kyllingelår',
+  'beef':'oksekød','ground beef':'hakket oksekød','minced beef':'hakket oksekød',
+  'pork':'svinekød','bacon':'bacon','ham':'skinke','lamb':'lammekød',
+  'turkey':'kalkun','salmon':'laks','tuna':'tun',
+  'shrimp':'rejer','prawns':'rejer','cod':'torsk',
+  'onion':'løg','onions':'løg','red onion':'rødløg','garlic':'hvidløg',
+  'tomato':'tomat','tomatoes':'tomater',
+  'carrot':'gulerod','carrots':'gulerødder',
+  'potato':'kartoffel','potatoes':'kartofler','sweet potato':'søde kartofler',
+  'bell pepper':'peberfrugt','red pepper':'rød peberfrugt',
+  'cucumber':'agurk','zucchini':'squash','courgette':'squash',
+  'spinach':'spinat','lettuce':'salat','broccoli':'broccoli',
+  'cauliflower':'blomkål','cabbage':'kål',
+  'mushroom':'svamp','mushrooms':'svampe',
+  'leek':'porre','celery':'selleri','aubergine':'aubergine','eggplant':'aubergine',
+  'asparagus':'asparges','green beans':'grønne bønner',
+  'corn':'majs','peas':'ærter','avocado':'avocado',
+  'apple':'æble','apples':'æbler','lemon':'citron','lemons':'citroner',
+  'lime':'lime','orange':'appelsin','banana':'banan',
+  'strawberry':'jordbær','strawberries':'jordbær',
+  'blueberry':'blåbær','blueberries':'blåbær',
+  'flour':'mel','all-purpose flour':'hvedemel','bread flour':'hvedemel',
+  'sugar':'sukker','brown sugar':'brun farin',
+  'salt':'salt','pepper':'peber','black pepper':'sort peber',
+  'olive oil':'olivenolie','oil':'olie','vegetable oil':'olie',
+  'vinegar':'eddike','soy sauce':'sojasauce','honey':'honning',
+  'tomato paste':'tomatpuré','tomato purée':'tomatpuré',
+  'canned tomatoes':'hakkede tomater','pasta':'pasta',
+  'spaghetti':'spaghetti','rice':'ris',
+  'basmati rice':'basmatiris','jasmine rice':'jasminris',
+  'bread':'brød','breadcrumbs':'rasp',
+  'baking powder':'bagepulver','baking soda':'natron',
+  'hazelnut':'hasselnød','hazelnuts':'hasselnødder',
+  'pine nut':'pinjekernen','pine nuts':'pinjekerner',
+  'almond':'mandel','almonds':'mandler',
+  'walnut':'valnød','walnuts':'valnødder',
+  'cashew':'cashewnød','cashews':'cashewnødder',
+  'peanut':'jordnød','peanuts':'jordnødder',
+  'salted peanuts':'saltede jordnødder',
+  'sesame seeds':'sesamfrø','sunflower seeds':'solsikkekerner',
+  'basil':'basilikum','oregano':'oregano','thyme':'timian',
+  'rosemary':'rosmarin','parsley':'persille',
+  'cilantro':'koriander','coriander':'koriander',
+  'chili':'chili','paprika':'paprika','cumin':'spidskommen',
+  'cinnamon':'kanel','nutmeg':'muskatnød','bay leaves':'laurbærblade',
+  // German → Danish
+  'milch':'mælk','vollmilch':'sødmælk','fettarme milch':'letmælk',
+  'magermilch':'skummetmælk','sahne':'fløde','schlagsahne':'piskefløde',
+  'joghurt':'yoghurt','käse':'ost','parmesankäse':'parmesanost',
+  'ziegenkäse':'gedeost','ei':'æg','eier':'æg',
+  'hähnchen':'kylling','hühnerbrust':'kyllingebryst',
+  'hähnchenbrustfilet':'kyllingebryst','hähnchenkeule':'kyllingelår',
+  'rinderhack':'hakket oksekød','hackfleisch':'hakket kød',
+  'rindfleisch':'oksekød','schweinefleisch':'svinekød',
+  'speck':'bacon','schinken':'skinke','lammfleisch':'lammekød',
+  'truthahn':'kalkun','lachs':'laks','thunfisch':'tun',
+  'garnelen':'rejer','kabeljau':'torsk',
+  'zwiebel':'løg','zwiebeln':'løg','rote zwiebeln':'rødløg',
+  'knoblauch':'hvidløg','tomate':'tomat','tomaten':'tomater',
+  'karotte':'gulerod','karotten':'gulerødder','möhren':'gulerødder',
+  'kartoffeln':'kartofler','süßkartoffel':'søde kartofler',
+  'gurke':'agurk','zucchini':'squash','spinat':'spinat',
+  'brokkoli':'broccoli','blumenkohl':'blomkål','kohl':'kål',
+  'champignon':'svamp','champignons':'svampe','pilze':'svampe',
+  'lauch':'porre','sellerie':'selleri',
+  'spargel':'asparges','grüne bohnen':'grønne bønner',
+  'mais':'majs','erbsen':'ærter',
+  'apfel':'æble','äpfel':'æbler','zitrone':'citron','zitronen':'citroner',
+  'limette':'lime','banane':'banan',
+  'erdbeere':'jordbær','erdbeeren':'jordbær',
+  'blaubeere':'blåbær','blaubeeren':'blåbær',
+  'mehl':'mel','weizenmehl':'hvedemel','zucker':'sukker',
+  'brauner zucker':'brun farin','salz':'salt','pfeffer':'peber',
+  'schwarzer pfeffer':'sort peber','olivenöl':'olivenolie','öl':'olie',
+  'essig':'eddike','sojasauce':'sojasauce','honig':'honning',
+  'tomatenmark':'tomatpuré','nudeln':'pasta','reis':'ris',
+  'basmatireis':'basmatiris','jasminreis':'jasminris',
+  'brot':'brød','semmelbrösel':'rasp','backpulver':'bagepulver',
+  'haselnuss':'hasselnød','haselnüsse':'hasselnødder',
+  'pinienkerne':'pinjekerner','mandel':'mandel','mandeln':'mandler',
+  'walnuss':'valnød','walnüsse':'valnødder',
+  'cashewkerne':'cashewnødder','erdnüsse':'jordnødder',
+  'gesalzene erdnüsse':'saltede jordnødder',
+  'sesamsamen':'sesamfrø','sonnenblumenkerne':'solsikkekerner',
+  'basilikum':'basilikum','thymian':'timian','rosmarin':'rosmarin',
+  'petersilie':'persille','koriander':'koriander',
+  'paprikapulver':'paprika','kreuzkümmel':'spidskommen',
+  'zimt':'kanel','muskatnuss':'muskatnød','lorbeerblätter':'laurbærblade',
+};
+
+function toDanish(name) {
+  const key = name.toLowerCase().trim();
+  if (TRANSLATIONS[key]) return TRANSLATIONS[key];
+  if (key.endsWith('s') && TRANSLATIONS[key.slice(0, -1)]) return TRANSLATIONS[key.slice(0, -1)];
+  return name;
+}
+
 // ── Cheapest-for-amount ────────────────────────────────────────────────────────
 const ITEM_RE = /^(\d+[.,]?\d*)\s*(kg|g|l|dl|cl|ml|stk|pcs|stuk|piece|pieces)?\s+(.+)$/i;
 
@@ -343,7 +453,7 @@ async function run() {
       }
 
       // Search
-      const searchTerm = parsed.name;
+      const searchTerm = toDanish(parsed.name);
       log(`  Searching Nemlig for "${searchTerm}"...`);
       let products;
       try {
@@ -384,7 +494,6 @@ async function run() {
       );
     } else {
       renderResults(rows, skipped);
-      openAllInTabs(rows);
     }
 
     log(rows.length ? `Done — ${rows.length} item(s) matched.` : 'Done (0 items matched).', rows.length ? 'ok' : 'warn');
@@ -457,7 +566,7 @@ function openSearchTabs() {
   }
   for (const line of lines) {
     const parsed = parseShoppingLine(line);
-    const term = parsed ? parsed.name : line;
+    const term = toDanish(parsed ? parsed.name : line);
     window.open(`${BASE}/forside?search=${encodeURIComponent(term)}`, '_blank', 'noopener');
   }
 }
