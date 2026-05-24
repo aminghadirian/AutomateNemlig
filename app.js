@@ -233,7 +233,7 @@ function toDanish(name) {
 }
 
 // ── Cheapest-for-amount ────────────────────────────────────────────────────────
-const ITEM_RE = /^(\d+[.,]?\d*)\s*(kg|g|l|dl|cl|ml|stk|pcs|stuk|piece|pieces)?\s+(.+)$/i;
+const ITEM_RE = /^(\d+[.,]?\d*)\s*(kg|g|l|dl|cl|ml|stk|pcs|stuk|piece|pieces|tbsp|tsp|cup|cups|spsk|tsk)?\s+(.+)$/i;
 
 function parseShoppingLine(line) {
   const m = line.trim().match(ITEM_RE);
@@ -494,6 +494,7 @@ async function run() {
       );
     } else {
       renderResults(rows, skipped);
+      rows.forEach(r => { if (r.best.url) window.open(r.best.url, '_blank', 'noopener'); });
     }
 
     log(rows.length ? `Done — ${rows.length} item(s) matched.` : 'Done (0 items matched).', rows.length ? 'ok' : 'warn');
@@ -572,30 +573,65 @@ function openSearchTabs() {
 }
 
 // ── Reformat + translate ───────────────────────────────────────────────────────
-function reformatAndTranslate() {
+async function apiTranslate(text, langpair) {
+  try {
+    const r = await fetch(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`
+    );
+    const data = await r.json();
+    const t = (data.responseData?.translatedText || '').trim();
+    return t && t.toLowerCase() !== text.toLowerCase() ? t : null;
+  } catch {
+    return null;
+  }
+}
+
+async function reformatAndTranslate() {
   const raw = document.getElementById('list').value;
   if (!raw.trim()) { showBanner('Enter a shopping list first.', 'warning'); return; }
 
-  const base = parseCookidooFormat(raw) || raw;
+  const btn = document.getElementById('cookidooBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
 
-  let translated = 0;
-  const lines = base.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
-    const parsed = parseShoppingLine(line);
-    if (!parsed) return line;
-    const danish = toDanish(parsed.name);
-    if (danish === parsed.name) return line;
-    translated++;
-    const parts = [String(parsed.amount)];
-    if (parsed.unit !== 'stk') parts.push(parsed.unit);
-    parts.push(danish);
-    return parts.join(' ');
-  });
+  try {
+    const base = parseCookidooFormat(raw) || raw;
+    let translated = 0;
+    const result = [];
 
-  document.getElementById('list').value = lines.join('\n');
-  const msg = translated
-    ? `Reformatted — ${translated} item(s) translated to Danish. Review before searching.`
-    : 'Reformatted — no translations needed (items may already be in Danish).';
-  showBanner(msg, 'info');
+    for (const line of base.split('\n').map(l => l.trim()).filter(Boolean)) {
+      const parsed = parseShoppingLine(line);
+      if (!parsed) { result.push(line); continue; }
+
+      let danish = toDanish(parsed.name);
+
+      if (danish === parsed.name) {
+        danish = (await apiTranslate(parsed.name, 'en|da')) || danish;
+      }
+      if (danish === parsed.name) {
+        danish = (await apiTranslate(parsed.name, 'de|da')) || danish;
+      }
+
+      if (danish !== parsed.name) {
+        translated++;
+        const parts = [String(parsed.amount)];
+        if (parsed.unit !== 'stk') parts.push(parsed.unit);
+        parts.push(danish);
+        result.push(parts.join(' '));
+      } else {
+        result.push(line);
+      }
+    }
+
+    document.getElementById('list').value = result.join('\n');
+    const msg = translated
+      ? `Reformatted — ${translated} item(s) translated to Danish. Review before searching.`
+      : 'Reformatted — no translations applied (items may already be in Danish).';
+    showBanner(msg, 'info');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
