@@ -1,9 +1,17 @@
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const BASE       = 'https://www.nemlig.com';
-const SEARCH_URL = 'https://www.nemlig.com/webapi/s/0/1/0/Search/Search';
-const CORS_PROXY = 'https://corsproxy.io/?';
+const BASE            = 'https://www.nemlig.com';
+const SEARCH_URL      = `${BASE}/webapi/s/0/1/0/Search/Search`;
+const ANTIFORGERY_URL = `${BASE}/webapi/user/antiforgerytoken`;
+const TOKEN_URL       = `${BASE}/webapi/user/token`;
+const LOGIN_URL       = `${BASE}/webapi/user/login`;
+const BASKET_URL      = `${BASE}/webapi/basket/AddToBasket`;
+const CORS_PROXY      = 'https://corsproxy.io/?';
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let bearerToken = sessionStorage.getItem('nemlig_bearer') || null;
+let lastRows    = [];
 
 // ── Unit helpers (ported from Python) ─────────────────────────────────────────
 const UNIT_TO_BASE_ML_OR_G = {
@@ -71,6 +79,52 @@ function productUrl(product) {
 
 function productName(product) {
   return product.displayName || product.DisplayName || product.name || product.Name || '';
+}
+
+function productId(product) {
+  return product.id ?? product.Id ?? product.productId ?? product.ProductId
+      ?? product.stockcode ?? product.Stockcode ?? null;
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+async function login(email, password) {
+  const r1 = await fetch(CORS_PROXY + encodeURIComponent(ANTIFORGERY_URL));
+  if (!r1.ok) throw new Error(`Antiforgery fetch failed: HTTP ${r1.status}`);
+  const af = (await r1.json()).antiForgeryToken || '';
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-XSRF-TOKEN': af,
+    'RequestVerificationToken': af,
+  };
+
+  const r2 = await fetch(CORS_PROXY + encodeURIComponent(TOKEN_URL), {
+    method: 'POST', headers,
+    body: JSON.stringify({ username: email, password }),
+  });
+  if (!r2.ok) throw new Error(`Token fetch failed: HTTP ${r2.status}`);
+  const { access_token } = await r2.json();
+  if (access_token) {
+    bearerToken = access_token;
+    sessionStorage.setItem('nemlig_bearer', access_token);
+  }
+
+  const authHeaders = { ...headers };
+  if (bearerToken) authHeaders['Authorization'] = `Bearer ${bearerToken}`;
+  await fetch(CORS_PROXY + encodeURIComponent(LOGIN_URL), {
+    method: 'POST', headers: authHeaders,
+    body: JSON.stringify({ username: email, password }),
+  });
+}
+
+async function addToBasket(id, quantity) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
+  const r = await fetch(CORS_PROXY + encodeURIComponent(BASKET_URL), {
+    method: 'POST', headers,
+    body: JSON.stringify({ productId: id, quantity }),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
 }
 
 // ── Search ─────────────────────────────────────────────────────────────────────
@@ -215,7 +269,7 @@ function findCheapest(products, parsed, searchTerm) {
 
     const packsNeeded = Math.ceil(amountBase / packInfo.qty);
     candidates.push({
-      name, price, url: productUrl(p),
+      id: productId(p), name, price, url: productUrl(p),
       packsNeeded, total: packsNeeded * price,
       unitLabel: packInfo.label,
     });
@@ -360,6 +414,8 @@ async function run() {
 }
 
 function renderResults(rows, skipped) {
+  lastRows = rows;
+
   const section = document.getElementById('resultsSection');
   const tbody   = document.getElementById('resultsTbody');
   tbody.innerHTML = '';
@@ -404,10 +460,56 @@ function renderResults(rows, skipped) {
     note.hidden = true;
   }
 
+  document.getElementById('basketBtn').hidden = false;
   section.hidden = false;
+}
+
+// ── Basket flow ────────────────────────────────────────────────────────────────
+async function runBasket(rows) {
+  clearLog();
+  hideBanner();
+
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if (!email || !password) {
+    showBanner('Enter your Nemlig email and password first.');
+    return;
+  }
+
+  const btn = document.getElementById('basketBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+
+  try {
+    log('Logging in to Nemlig...');
+    await login(email, password);
+    log('Logged in ✓', 'ok');
+
+    for (const { best } of rows) {
+      if (!best.id) {
+        log(`  ✗ No product ID for "${best.name}" — skipped`, 'warn');
+        continue;
+      }
+      log(`  Adding ${best.packsNeeded}× "${best.name}"...`);
+      try {
+        await addToBasket(best.id, best.packsNeeded);
+        log(`  ✓ Added`, 'ok', 'https://www.nemlig.com/kurv');
+      } catch (e) {
+        log(`  ✗ Failed: ${e.message}`, 'error');
+      }
+    }
+    log('Done — review your basket:', 'ok', 'https://www.nemlig.com/kurv');
+  } catch (e) {
+    showBanner(`Login failed: ${e.message}`);
+    log(`✗ ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
+  document.getElementById('basketBtn').addEventListener('click', () => runBasket(lastRows));
 });

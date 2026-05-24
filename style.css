@@ -233,6 +233,33 @@ button#findBtn.loading::before {
 .log-error { color: var(--danger); }
 #log a     { color: var(--green); text-decoration: underline; }
 
+button#basketBtn {
+  width: 100%;
+  margin-top: 12px;
+  background: #fff;
+  color: var(--green);
+  border: 2px solid var(--green);
+  border-radius: 8px;
+  padding: 13px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+button#basketBtn:hover { background: var(--green-pale); }
+button#basketBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
+button#basketBtn.loading::before {
+  content: '';
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid rgba(0,0,0,.15);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 @media (max-width: 400px) {
   table { font-size: .78rem; }
   td, thead th { padding: 6px 7px; }

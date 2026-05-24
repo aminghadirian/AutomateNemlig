@@ -21,6 +21,20 @@
   <!-- CORS / error banner -->
   <div id="banner" class="banner error" hidden></div>
 
+  <!-- Nemlig account credentials (needed for basket) -->
+  <div class="card">
+    <h2>Nemlig account</h2>
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" autocomplete="username" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <p class="hint">Only needed for "Add to basket". Credentials go via a CORS proxy to reach Nemlig — not stored anywhere permanently.</p>
+  </div>
+
   <!-- Shopping list -->
   <div class="card">
     <h2>Shopping list</h2>
@@ -58,6 +72,7 @@
       </table>
     </div>
     <p id="skippedNote" class="skipped-note" hidden></p>
+    <button id="basketBtn" hidden>Add all to basket</button>
   </div>
 
 </main>
