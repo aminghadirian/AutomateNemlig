@@ -571,17 +571,36 @@ function openSearchTabs() {
   }
 }
 
+// ── Reformat + translate ───────────────────────────────────────────────────────
+function reformatAndTranslate() {
+  const raw = document.getElementById('list').value;
+  if (!raw.trim()) { showBanner('Enter a shopping list first.', 'warning'); return; }
+
+  const base = parseCookidooFormat(raw) || raw;
+
+  let translated = 0;
+  const lines = base.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const parsed = parseShoppingLine(line);
+    if (!parsed) return line;
+    const danish = toDanish(parsed.name);
+    if (danish === parsed.name) return line;
+    translated++;
+    const parts = [String(parsed.amount)];
+    if (parsed.unit !== 'stk') parts.push(parsed.unit);
+    parts.push(danish);
+    return parts.join(' ');
+  });
+
+  document.getElementById('list').value = lines.join('\n');
+  const msg = translated
+    ? `Reformatted — ${translated} item(s) translated to Danish. Review before searching.`
+    : 'Reformatted — no translations needed (items may already be in Danish).';
+  showBanner(msg, 'info');
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('cookidooBtn').addEventListener('click', reformatAndTranslate);
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
-  document.getElementById('list').addEventListener('paste', e => {
-    const text = (e.clipboardData || window.clipboardData).getData('text');
-    const reformatted = parseCookidooFormat(text);
-    if (reformatted) {
-      e.preventDefault();
-      document.getElementById('list').value = reformatted;
-      showBanner('Cookidoo list reformatted — review before searching.', 'info');
-    }
-  });
 });
