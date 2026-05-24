@@ -131,6 +131,67 @@ function parseShoppingLine(line) {
   return { amount, unit, amountBase, unitType, name };
 }
 
+function extractPackInfo(product) {
+  const price = extractPrice(product);
+  if (!price) return null;
+
+  // Strategy 1: use API-provided unitPrice + unitPriceLabel to calculate pack size
+  const po = product.pricing || product.Pricing || product.price || {};
+  const unitPrice = parseFloat(
+    po.unitPrice || po.UnitPrice || po.pricePerUnit || po.PricePerUnit || 0
+  );
+  const rawLabel = (po.unitPriceLabel || po.UnitPriceLabel || po.unitLabel || po.UnitLabel || '').toLowerCase();
+
+  if (unitPrice > 0 && rawLabel) {
+    const isVol    = /\/\s*l\b|liter|litre/.test(rawLabel);
+    const isWeight = /\/\s*kg\b/.test(rawLabel);
+    const isCount  = /stk|stuk|pcs|piece/.test(rawLabel);
+
+    if (isVol || isWeight) {
+      // packSize in L or kg, then convert to ml or g (base units)
+      const packSizeInUnit = price / unitPrice;
+      const qty = packSizeInUnit * 1000;
+      const unitType = isVol ? 'volume' : 'weight';
+      const label = isVol
+        ? `${packSizeInUnit.toFixed(packSizeInUnit % 1 === 0 ? 0 : 2)} L`
+        : packSizeInUnit >= 1
+          ? `${packSizeInUnit.toFixed(packSizeInUnit % 1 === 0 ? 0 : 2)} kg`
+          : `${Math.round(packSizeInUnit * 1000)} g`;
+      return { qty, unitType, label };
+    }
+    if (isCount) {
+      const packCount = Math.max(1, Math.round(price / unitPrice));
+      return { qty: packCount, unitType: 'count', label: `${packCount} stk` };
+    }
+  }
+
+  // Strategy 2: regex across all text fields
+  const allText = [
+    productName(product),
+    product.description || product.Description || '',
+    product.subtitle    || product.Subtitle    || '',
+    product.salesUnitShortName || product.SalesUnitShortName || '',
+    product.unitSize    || product.UnitSize    || '',
+  ].join(' ');
+
+  const { qty, unitType } = parsePackSize(allText);
+  if (qty && unitType && unitType !== 'other') {
+    const label = unitType === 'volume'
+      ? `${(qty/1000).toFixed(qty % 1000 === 0 ? 0 : 2)} L`
+      : qty >= 1000 ? `${(qty/1000).toFixed(0)} kg` : `${qty} g`;
+    return { qty, unitType, label };
+  }
+
+  // Strategy 3: stk count in text (for count items)
+  const stkMatch = allText.match(/(\d+)\s*stk\b/i);
+  if (stkMatch) {
+    const packCount = parseInt(stkMatch[1]);
+    return { qty: packCount, unitType: 'count', label: `${packCount} stk` };
+  }
+
+  return null;
+}
+
 function findCheapest(products, parsed) {
   const { amountBase, unitType } = parsed;
   const candidates = [];
@@ -138,31 +199,22 @@ function findCheapest(products, parsed) {
   for (const p of products) {
     const price = extractPrice(p);
     if (!price || price <= 0) continue;
-    const name = productName(p);
 
-    if (unitType === 'count') {
-      // For count items, compare by price / count
-      // Try to find a count in the product name like "12 stk" or just use 1
-      const countMatch = name.match(/(\d+)\s*stk\b/i);
-      const packCount = countMatch ? parseInt(countMatch[1]) : 1;
-      const packsNeeded = Math.ceil(amountBase / packCount);
-      candidates.push({
-        name, price, url: productUrl(p),
-        packCount, packsNeeded, total: packsNeeded * price,
-        unitLabel: `${packCount} stk`,
-      });
-    } else {
-      const { qty, unitType: packUnitType } = parsePackSize(name);
-      if (!qty || packUnitType !== unitType) continue;
-      const packsNeeded = Math.ceil(amountBase / qty);
-      candidates.push({
-        name, price, url: productUrl(p),
-        packCount: qty, packsNeeded, total: packsNeeded * price,
-        unitLabel: unitType === 'volume'
-          ? `${(qty/1000).toFixed(qty % 1000 === 0 ? 0 : 2)} L`
-          : `${(qty >= 1000 ? (qty/1000).toFixed(qty%1000===0?0:2)+'kg' : qty+'g')}`,
-      });
-    }
+    const packInfo = extractPackInfo(p);
+    if (!packInfo || packInfo.unitType !== unitType) continue;
+
+    const packsNeeded = Math.ceil(amountBase / packInfo.qty);
+    candidates.push({
+      name: productName(p), price, url: productUrl(p),
+      packsNeeded, total: packsNeeded * price,
+      unitLabel: packInfo.label,
+    });
+  }
+
+  if (!candidates.length && products.length) {
+    // Debug: show first product's top-level field names so we can adapt if needed
+    console.debug('No matches. First product keys:', Object.keys(products[0]).join(', '));
+    console.debug('First product pricing:', JSON.stringify(products[0].pricing || products[0].price || products[0].Price || {}));
   }
 
   candidates.sort((a, b) => a.total - b.total);
@@ -258,11 +310,15 @@ async function run() {
       const best = findCheapest(products, parsed);
       if (!best) {
         log(`  ✗ No product matched the unit type (${parsed.unitType})`, 'warn');
+        if (products.length) {
+          log(`  ℹ API fields: ${Object.keys(products[0]).join(', ')}`, 'info');
+        }
         skipped.push(`${line} (no matching pack size)`);
         continue;
       }
 
-      log(`  ✓ Best: ${best.name} — ${best.total.toFixed(2)} kr (${best.packsNeeded}×${best.price.toFixed(2)} kr)`, 'ok');
+      const link = best.url ? `\n      ${best.url}` : '';
+      log(`  ✓ Best: ${best.name} — ${best.total.toFixed(2)} kr (${best.packsNeeded}×${best.price.toFixed(2)} kr)${link}`, 'ok');
       rows.push({ line, parsed, searchTerm, best });
     }
 
