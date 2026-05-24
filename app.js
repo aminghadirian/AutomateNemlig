@@ -146,6 +146,28 @@ function parseShoppingLine(line) {
   return { amount, unit, amountBase, unitType, name };
 }
 
+function parseCookidooFormat(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const pairs = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const next = lines[i + 1];
+    const lineIsName   = !/^\d/.test(line);
+    const nextIsAmount = next && /^\d/.test(next);
+    if (lineIsName && nextIsAmount) {
+      const amtMatch = next.match(/^(\d+[.,]?\d*)(?:\s*-\s*\d+[.,]?\d*)?\s*(\S+)?/);
+      const amt  = amtMatch ? amtMatch[1] : '';
+      const unit = amtMatch ? (amtMatch[2] || '') : '';
+      pairs.push(`${amt}${unit ? ' ' + unit : ''} ${line}`);
+      i += 2;
+    } else {
+      i += 1;
+    }
+  }
+  return pairs.length >= 2 ? pairs.join('\n') : null;
+}
+
 function extractPackInfo(product) {
   const price = extractPrice(product);
   if (!price) return null;
@@ -444,4 +466,13 @@ function openSearchTabs() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
+  document.getElementById('list').addEventListener('paste', e => {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    const reformatted = parseCookidooFormat(text);
+    if (reformatted) {
+      e.preventDefault();
+      document.getElementById('list').value = reformatted;
+      showBanner('Cookidoo list reformatted — review before searching.', 'info');
+    }
+  });
 });
