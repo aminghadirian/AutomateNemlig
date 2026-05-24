@@ -2,7 +2,7 @@
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const BASE       = 'https://www.nemlig.com';
-const SEARCH_URL = 'https://webapi.prod.knl.nemlig.it/api/v2/search';
+const SEARCH_URL = 'https://www.nemlig.com/webapi/s/0/1/0/Search/Search';
 const CORS_PROXY = 'https://corsproxy.io/?';
 
 // ── Unit helpers (ported from Python) ─────────────────────────────────────────
@@ -77,24 +77,19 @@ function productName(product) {
 async function searchProducts(query) {
   const url = new URL(SEARCH_URL);
   url.searchParams.set('query', query);
-  url.searchParams.set('pageSize', '48');
-  url.searchParams.set('pageIndex', '0');
-  const directUrl = url.toString();
-  const proxyUrl  = CORS_PROXY + encodeURIComponent(directUrl);
-
-  // Try direct first; if CORS blocks it, retry via proxy
-  for (const endpoint of [directUrl, proxyUrl]) {
-    try {
-      const r = await fetch(endpoint);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const data = await r.json();
-      return extractProductList(data);
-    } catch (e) {
-      if (endpoint === proxyUrl) throw new Error(`Search failed: ${e.message}`);
-      // else try proxy next
-    }
+  url.searchParams.set('take', '48');
+  // Always route through CORS proxy — www.nemlig.com blocks cross-origin requests
+  const proxied = CORS_PROXY + encodeURIComponent(url.toString());
+  const r = await fetch(proxied);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const data = await r.json();
+  const products = extractProductList(data);
+  if (!products.length) {
+    // Log top-level keys to help debug unexpected response shapes
+    const keys = data && typeof data === 'object' ? Object.keys(data).join(', ') : String(data);
+    console.debug('Search response keys:', keys);
   }
-  return [];
+  return products;
 }
 
 function extractProductList(data) {
