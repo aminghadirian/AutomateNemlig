@@ -1,13 +1,9 @@
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const BASE          = 'https://www.nemlig.com';
-const SEARCH_URL    = 'https://webapi.prod.knl.nemlig.it/api/v2/search';
-const TRANSLATE_URL = 'https://api.mymemory.translated.net/get';
-const CORS_PROXY    = 'https://corsproxy.io/?';
-
-// ── State ──────────────────────────────────────────────────────────────────────
-const translationCache = {};
+const BASE       = 'https://www.nemlig.com';
+const SEARCH_URL = 'https://webapi.prod.knl.nemlig.it/api/v2/search';
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 // ── Unit helpers (ported from Python) ─────────────────────────────────────────
 const UNIT_TO_BASE_ML_OR_G = {
@@ -75,27 +71,6 @@ function productUrl(product) {
 
 function productName(product) {
   return product.displayName || product.DisplayName || product.name || product.Name || '';
-}
-
-// ── Translation ────────────────────────────────────────────────────────────────
-async function toDanish(text) {
-  const key = text.toLowerCase().trim();
-  if (translationCache[key]) return translationCache[key];
-
-  try {
-    const url = `${TRANSLATE_URL}?q=${encodeURIComponent(text)}&langpair=auto|da`;
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('translate fetch failed');
-    const data = await r.json();
-    const translated = data?.responseData?.translatedText;
-    if (translated && translated !== text) {
-      translationCache[key] = { term: translated, translated: true };
-      return translationCache[key];
-    }
-  } catch (_) { /* fall through */ }
-
-  translationCache[key] = { term: text, translated: false };
-  return translationCache[key];
 }
 
 // ── Search ─────────────────────────────────────────────────────────────────────
@@ -265,16 +240,8 @@ async function run() {
         continue;
       }
 
-      // Translate
-      log(`  Translating "${parsed.name}"...`);
-      const { term: searchTerm, translated } = await toDanish(parsed.name);
-      if (translated) {
-        log(`  → "${searchTerm}"`, 'ok');
-      } else {
-        log(`  → using as-is: "${searchTerm}"`, 'info');
-      }
-
       // Search
+      const searchTerm = parsed.name;
       log(`  Searching Nemlig for "${searchTerm}"...`);
       let products;
       try {
@@ -301,7 +268,7 @@ async function run() {
       }
 
       log(`  ✓ Best: ${best.name} — ${best.total.toFixed(2)} kr (${best.packsNeeded}×${best.price.toFixed(2)} kr)`, 'ok');
-      rows.push({ line, parsed, searchTerm, translated, best });
+      rows.push({ line, parsed, searchTerm, best });
     }
 
     if (rows.length === 0) {
@@ -331,13 +298,10 @@ function renderResults(rows, skipped) {
 
   let grandTotal = 0;
 
-  for (const { line, parsed, searchTerm, translated, best } of rows) {
+  for (const { parsed, searchTerm, best } of rows) {
     grandTotal += best.total;
     const tr = document.createElement('tr');
-
-    const nameCell = translated
-      ? `${parsed.name}<span class="tag-translated" title="Translated to Danish">${searchTerm}</span>`
-      : parsed.name;
+    const nameCell = parsed.name;
 
     const productCell = best.url
       ? `<a href="${best.url}" target="_blank" rel="noopener">${best.name}</a>`
