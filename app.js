@@ -1,15 +1,12 @@
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const BASE        = 'https://www.nemlig.com';
-const ANTIFORGERY = `${BASE}/webapi/user/antiforgerytoken`;
-const TOKEN_URL   = `${BASE}/webapi/user/token`;
-const LOGIN_URL   = `${BASE}/webapi/user/login`;
-const SEARCH_URL  = 'https://webapi.prod.knl.nemlig.it/api/v2/search';
+const BASE          = 'https://www.nemlig.com';
+const SEARCH_URL    = 'https://webapi.prod.knl.nemlig.it/api/v2/search';
 const TRANSLATE_URL = 'https://api.mymemory.translated.net/get';
+const CORS_PROXY    = 'https://corsproxy.io/?';
 
 // ── State ──────────────────────────────────────────────────────────────────────
-let bearerToken = sessionStorage.getItem('nemlig_bearer') || null;
 const translationCache = {};
 
 // ── Unit helpers (ported from Python) ─────────────────────────────────────────
@@ -80,64 +77,6 @@ function productName(product) {
   return product.displayName || product.DisplayName || product.name || product.Name || '';
 }
 
-// ── Auth ───────────────────────────────────────────────────────────────────────
-async function login(email, password) {
-  setStatus('Authenticating...');
-
-  // Step 1: antiforgery token
-  let afToken;
-  try {
-    const r = await fetch(ANTIFORGERY, { credentials: 'include' });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    afToken = data.antiForgeryToken || data.token || '';
-  } catch (e) {
-    throw new Error(`Auth step 1 failed: ${e.message}`);
-  }
-
-  const authHeaders = {
-    'Content-Type': 'application/json',
-    'X-XSRF-TOKEN': afToken,
-    'RequestVerificationToken': afToken,
-  };
-
-  // Step 2: bearer token
-  let bearer = null;
-  try {
-    const r = await fetch(TOKEN_URL, {
-      method: 'POST',
-      headers: authHeaders,
-      credentials: 'include',
-      body: JSON.stringify({ username: email, password }),
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    bearer = data.access_token || data.accessToken || data.token || null;
-  } catch (e) {
-    throw new Error(`Auth step 2 failed: ${e.message}`);
-  }
-
-  if (bearer) {
-    bearerToken = bearer;
-    sessionStorage.setItem('nemlig_bearer', bearer);
-  }
-
-  // Step 3: login
-  try {
-    const headers = { ...authHeaders };
-    if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
-    const r = await fetch(LOGIN_URL, {
-      method: 'POST',
-      headers,
-      credentials: 'include',
-      body: JSON.stringify({ username: email, password }),
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  } catch (e) {
-    throw new Error(`Auth step 3 failed: ${e.message}`);
-  }
-}
-
 // ── Translation ────────────────────────────────────────────────────────────────
 async function toDanish(text) {
   const key = text.toLowerCase().trim();
@@ -161,18 +100,26 @@ async function toDanish(text) {
 
 // ── Search ─────────────────────────────────────────────────────────────────────
 async function searchProducts(query) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (bearerToken) headers['Authorization'] = `Bearer ${bearerToken}`;
-
   const url = new URL(SEARCH_URL);
   url.searchParams.set('query', query);
   url.searchParams.set('pageSize', '48');
   url.searchParams.set('pageIndex', '0');
+  const directUrl = url.toString();
+  const proxyUrl  = CORS_PROXY + encodeURIComponent(directUrl);
 
-  const r = await fetch(url.toString(), { headers, credentials: 'include' });
-  if (!r.ok) throw new Error(`Search failed: HTTP ${r.status}`);
-  const data = await r.json();
-  return extractProductList(data);
+  // Try direct first; if CORS blocks it, retry via proxy
+  for (const endpoint of [directUrl, proxyUrl]) {
+    try {
+      const r = await fetch(endpoint);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      return extractProductList(data);
+    } catch (e) {
+      if (endpoint === proxyUrl) throw new Error(`Search failed: ${e.message}`);
+      // else try proxy next
+    }
+  }
+  return [];
 }
 
 function extractProductList(data) {
@@ -278,26 +225,11 @@ function fmtPrice(kr) {
   return kr.toFixed(2) + ' kr';
 }
 
-// ── CORS probe ─────────────────────────────────────────────────────────────────
-async function corsProbe() {
-  try {
-    await fetch(`${SEARCH_URL}?query=test&pageSize=1&pageIndex=0`, { method: 'HEAD' });
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
 // ── Main flow ──────────────────────────────────────────────────────────────────
 async function run() {
   hideBanner();
-  const email    = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const listRaw  = document.getElementById('list').value;
-
-  if (!email || !password) { showBanner('Please enter your Nemlig email and password.'); return; }
-
-  const lines = listRaw.split('\n').map(l => l.trim()).filter(Boolean);
+  const listRaw = document.getElementById('list').value;
+  const lines   = listRaw.split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) { showBanner('Please enter at least one item.'); return; }
 
   const btn = document.getElementById('findBtn');
@@ -305,9 +237,6 @@ async function run() {
   document.getElementById('resultsSection').style.display = 'none';
 
   try {
-    // Auth
-    await login(email, password);
-
     // Process each line
     const rows = [];
     const skipped = [];
@@ -403,23 +332,4 @@ function renderResults(rows, skipped) {
 // ── Init ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
-
-  // Restore email from localStorage (not password — security)
-  const savedEmail = localStorage.getItem('nemlig_email');
-  if (savedEmail) document.getElementById('email').value = savedEmail;
-
-  document.getElementById('email').addEventListener('change', e => {
-    localStorage.setItem('nemlig_email', e.target.value.trim());
-  });
-
-  // CORS probe — non-blocking, just warn if failed
-  corsProbe().then(ok => {
-    if (!ok) {
-      showBanner(
-        'Note: Your browser may block direct API calls (CORS). If the app does not work, ' +
-        'use the Python CLI (nemlig_unit_price.py) instead.',
-        'warning'
-      );
-    }
-  });
 });
