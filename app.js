@@ -200,9 +200,20 @@ function findCheapest(products, parsed) {
 }
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────
-function setStatus(msg, spinner = false) {
-  const el = document.getElementById('statusBar');
-  el.innerHTML = spinner ? `<span class="spinner"></span>${msg}` : msg;
+function log(msg, type = 'info') {
+  const panel = document.getElementById('log');
+  panel.classList.add('active');
+  const div = document.createElement('div');
+  div.className = `log-${type}`;
+  div.textContent = msg;
+  panel.appendChild(div);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function clearLog() {
+  const panel = document.getElementById('log');
+  panel.innerHTML = '';
+  panel.classList.remove('active');
 }
 
 function showBanner(msg, type = 'error') {
@@ -228,53 +239,88 @@ function fmtPrice(kr) {
 // ── Main flow ──────────────────────────────────────────────────────────────────
 async function run() {
   hideBanner();
+  clearLog();
+
   const listRaw = document.getElementById('list').value;
   const lines   = listRaw.split('\n').map(l => l.trim()).filter(Boolean);
   if (!lines.length) { showBanner('Please enter at least one item.'); return; }
 
   const btn = document.getElementById('findBtn');
   btn.disabled = true;
-  document.getElementById('resultsSection').style.display = 'none';
+  btn.classList.add('loading');
+  document.getElementById('resultsSection').hidden = true;
 
   try {
-    // Process each line
     const rows = [];
     const skipped = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      setStatus(`Processing item ${i+1} of ${lines.length}: ${line}`, true);
+      log(`[${i+1}/${lines.length}] "${line}"`);
 
       const parsed = parseShoppingLine(line);
-      if (!parsed) { skipped.push(line); continue; }
+      if (!parsed) {
+        log(`  ✗ Could not parse — use format like "2L milk" or "500g smør"`, 'warn');
+        skipped.push(line);
+        continue;
+      }
 
       // Translate
+      log(`  Translating "${parsed.name}"...`);
       const { term: searchTerm, translated } = await toDanish(parsed.name);
+      if (translated) {
+        log(`  → "${searchTerm}"`, 'ok');
+      } else {
+        log(`  → using as-is: "${searchTerm}"`, 'info');
+      }
 
       // Search
+      log(`  Searching Nemlig for "${searchTerm}"...`);
       let products;
       try {
         products = await searchProducts(searchTerm);
       } catch (e) {
-        skipped.push(`${line} (search error: ${e.message})`);
+        log(`  ✗ Search failed: ${e.message}`, 'error');
+        skipped.push(`${line} (${e.message})`);
         continue;
       }
 
-      if (!products.length) { skipped.push(`${line} (no results)`); continue; }
+      if (!products.length) {
+        log(`  ✗ No products found`, 'warn');
+        skipped.push(`${line} (no results)`);
+        continue;
+      }
+      log(`  Found ${products.length} products`, 'ok');
 
+      // Find cheapest for required amount
       const best = findCheapest(products, parsed);
-      if (!best) { skipped.push(`${line} (no matching pack size found)`); continue; }
+      if (!best) {
+        log(`  ✗ No product matched the unit type (${parsed.unitType})`, 'warn');
+        skipped.push(`${line} (no matching pack size)`);
+        continue;
+      }
 
+      log(`  ✓ Best: ${best.name} — ${best.total.toFixed(2)} kr (${best.packsNeeded}×${best.price.toFixed(2)} kr)`, 'ok');
       rows.push({ line, parsed, searchTerm, translated, best });
     }
 
-    renderResults(rows, skipped);
-    setStatus('Done.');
+    if (rows.length === 0) {
+      showBanner(
+        `Nothing could be matched. Check your format (e.g. "2L milk", "500g smør", "12 eggs"). ` +
+        `See the log above for details.`,
+        'error'
+      );
+    } else {
+      renderResults(rows, skipped);
+    }
+
+    log(rows.length ? `Done — ${rows.length} item(s) matched.` : 'Done (0 items matched).', rows.length ? 'ok' : 'warn');
   } catch (e) {
-    showBanner(e.message || 'An error occurred.');
-    setStatus('');
+    showBanner(e.message || 'An unexpected error occurred.');
+    log(`✗ ${e.message}`, 'error');
   } finally {
     btn.disabled = false;
+    btn.classList.remove('loading');
   }
 }
 
@@ -326,7 +372,7 @@ function renderResults(rows, skipped) {
     note.hidden = true;
   }
 
-  section.style.display = '';
+  section.hidden = false;
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────

@@ -194,17 +194,43 @@ td a:hover { text-decoration: underline; }
 }
 
 /* Progress indicator */
-.spinner {
+@keyframes spin { to { transform: rotate(360deg); } }
+
+button#findBtn.loading {
+  background: #888;
+  cursor: not-allowed;
+}
+button#findBtn.loading::before {
+  content: '';
   display: inline-block;
-  width: 14px; height: 14px;
-  border: 2px solid var(--border);
-  border-top-color: var(--green);
+  width: 13px; height: 13px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin .7s linear infinite;
+  margin-right: 8px;
   vertical-align: middle;
-  margin-right: 6px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Step log */
+#log {
+  display: none;
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: .8rem;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  line-height: 1.6;
+}
+#log.active { display: block; }
+
+.log-info  { color: #555; }
+.log-ok    { color: var(--green); }
+.log-warn  { color: var(--warning); }
+.log-error { color: var(--danger); }
 
 @media (max-width: 400px) {
   table { font-size: .78rem; }
