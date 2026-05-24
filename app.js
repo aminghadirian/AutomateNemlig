@@ -74,7 +74,7 @@ function productUrl(product) {
            || product.link        || product.Link
            || product.seoUrl      || product.SeoUrl
            || '';
-  if (rel) return rel.startsWith('http') ? rel : BASE + rel;
+  if (rel) return rel.startsWith('http') ? rel : BASE + (rel.startsWith('/') ? rel : '/' + rel);
   const name = productName(product);
   return name ? `${BASE}/s?query=${encodeURIComponent(name)}` : null;
 }
