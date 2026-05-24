@@ -233,7 +233,7 @@ button#findBtn.loading::before {
 .log-error { color: var(--danger); }
 #log a     { color: var(--green); text-decoration: underline; }
 
-button#basketBtn {
+button#openAllBtn {
   width: 100%;
   margin-top: 12px;
   background: #fff;
@@ -246,9 +246,9 @@ button#basketBtn {
   cursor: pointer;
   transition: background .15s, color .15s;
 }
-button#basketBtn:hover { background: var(--green-pale); }
-button#basketBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
-button#basketBtn.loading::before {
+button#openAllBtn:hover { background: var(--green-pale); }
+button#openAllBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
+button#openAllBtn.loading::before {
   content: '';
   display: inline-block;
   width: 13px; height: 13px;
