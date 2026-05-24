@@ -234,6 +234,7 @@ button#findBtn.loading::before {
 .log-error { color: var(--danger); }
 #log a     { color: var(--green); text-decoration: underline; }
 
+button#cookidooBtn,
 button#openSearchBtn {
   width: 100%;
   margin-top: 12px;
@@ -247,8 +248,11 @@ button#openSearchBtn {
   cursor: pointer;
   transition: background .15s, color .15s;
 }
+button#cookidooBtn:hover,
 button#openSearchBtn:hover { background: var(--green-pale); }
+button#cookidooBtn:disabled,
 button#openSearchBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
+button#cookidooBtn.loading::before,
 button#openSearchBtn.loading::before {
   content: '';
   display: inline-block;
