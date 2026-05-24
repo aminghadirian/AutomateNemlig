@@ -134,6 +134,7 @@ button#findBtn:disabled { background: #aaa; cursor: not-allowed; }
 }
 .banner.error   { background: var(--danger-pale);  border-left: 4px solid var(--danger);  color: var(--danger); }
 .banner.warning { background: var(--warning-pale); border-left: 4px solid var(--warning); color: var(--warning);}
+.banner.info    { background: #e8f5e9; border-left: 4px solid var(--green); color: #1b5e20; }
 .banner.success { background: var(--green-pale);   border-left: 4px solid var(--green-light); color: var(--green); }
 
 /* Results */
