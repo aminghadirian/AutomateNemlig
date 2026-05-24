@@ -233,7 +233,6 @@ button#findBtn.loading::before {
 .log-error { color: var(--danger); }
 #log a     { color: var(--green); text-decoration: underline; }
 
-button#openAllBtn,
 button#openSearchBtn {
   width: 100%;
   margin-top: 12px;
@@ -247,11 +246,8 @@ button#openSearchBtn {
   cursor: pointer;
   transition: background .15s, color .15s;
 }
-button#openAllBtn:hover,
 button#openSearchBtn:hover { background: var(--green-pale); }
-button#openAllBtn:disabled,
 button#openSearchBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
-button#openAllBtn.loading::before,
 button#openSearchBtn.loading::before {
   content: '';
   display: inline-block;
