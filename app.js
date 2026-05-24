@@ -76,7 +76,7 @@ function productUrl(product) {
            || '';
   if (rel) return rel.startsWith('http') ? rel : BASE + (rel.startsWith('/') ? rel : '/' + rel);
   const name = productName(product);
-  return name ? `${BASE}/s?query=${encodeURIComponent(name)}` : null;
+  return name ? `${BASE}/forside?search=${encodeURIComponent(name)}` : null;
 }
 
 function productName(product) {
@@ -425,18 +425,7 @@ function renderResults(rows, skipped) {
   section.hidden = false;
 }
 
-// ── Open products ──────────────────────────────────────────────────────────────
-function openAllInTabs(rows) {
-  const urls = rows.map(r => r.best.url).filter(Boolean);
-  if (!urls.length) {
-    showBanner('No product links available — try searching again.', 'warning');
-    return;
-  }
-  for (const url of urls) {
-    window.open(url, '_blank', 'noopener');
-  }
-}
-
+// ── Open search tabs ───────────────────────────────────────────────────────────
 function openSearchTabs() {
   const lines = document.getElementById('list').value
     .split('\n').map(l => l.trim()).filter(Boolean);
@@ -447,13 +436,12 @@ function openSearchTabs() {
   for (const line of lines) {
     const parsed = parseShoppingLine(line);
     const term = parsed ? parsed.name : line;
-    window.open(`${BASE}/s?query=${encodeURIComponent(term)}`, '_blank', 'noopener');
+    window.open(`${BASE}/forside?search=${encodeURIComponent(term)}`, '_blank', 'noopener');
   }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
-  document.getElementById('openAllBtn').addEventListener('click', () => openAllInTabs(lastRows));
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
 });
