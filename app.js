@@ -350,16 +350,14 @@ function findCheapest(products, parsed, searchTerm) {
   const { amountBase, unitType } = parsed;
   const candidates = [];
 
+  // Strict pass: unit type must match → exact pack calculation
   for (const p of products) {
     const price = extractPrice(p);
     if (!price || price <= 0) continue;
-
     const name = productName(p);
     if (!nameMatchesQuery(name, searchTerm)) continue;
-
     const packInfo = extractPackInfo(p);
     if (!packInfo || packInfo.unitType !== unitType) continue;
-
     const packsNeeded = Math.ceil(amountBase / packInfo.qty);
     candidates.push({
       id: productId(p), name, price, url: productUrl(p),
@@ -368,14 +366,27 @@ function findCheapest(products, parsed, searchTerm) {
     });
   }
 
-  if (!candidates.length && products.length) {
-    // Debug: show first product's top-level field names so we can adapt if needed
-    console.debug('No matches. First product keys:', Object.keys(products[0]).join(', '));
-    console.debug('First product pricing:', JSON.stringify(products[0].pricing || products[0].price || products[0].Price || {}));
+  if (candidates.length) {
+    candidates.sort((a, b) => a.total - b.total);
+    return candidates[0];
   }
 
-  candidates.sort((a, b) => a.total - b.total);
-  return candidates[0] || null;
+  // Lenient fallback: ignore unit type mismatch — return cheapest matching product, 1 pack
+  const fallback = [];
+  for (const p of products) {
+    const price = extractPrice(p);
+    if (!price || price <= 0) continue;
+    const name = productName(p);
+    if (!nameMatchesQuery(name, searchTerm)) continue;
+    const packInfo = extractPackInfo(p);
+    fallback.push({
+      id: productId(p), name, price, url: productUrl(p),
+      packsNeeded: 1, total: price,
+      unitLabel: packInfo ? packInfo.label : '1 stk',
+    });
+  }
+  fallback.sort((a, b) => a.price - b.price);
+  return fallback[0] || null;
 }
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────
