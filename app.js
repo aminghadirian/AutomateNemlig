@@ -482,6 +482,7 @@ async function run() {
   btn.disabled = true;
   btn.classList.add('loading');
   document.getElementById('resultsSection').hidden = true;
+  document.getElementById('openResultsBtn').hidden = true;
 
   try {
     const rows = [];
@@ -599,9 +600,7 @@ function renderResults(rows, skipped) {
     note.hidden = true;
   }
 
-  const openBtn = document.getElementById('openResultsBtn');
-  openBtn.textContent = `Open ${rows.length} result${rows.length !== 1 ? 's' : ''} in Nemlig`;
-  openBtn.hidden = false;
+  document.getElementById('openResultsBtn').hidden = false;
 
   section.hidden = false;
 }
@@ -689,6 +688,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
   document.getElementById('openResultsBtn').addEventListener('click', () => {
-    lastRows.forEach(r => { if (r.best.url) window.open(r.best.url, '_blank', 'noopener'); });
+    lastRows.forEach((r, i) => {
+      if (r.best.url) setTimeout(() => window.open(r.best.url, '_blank', 'noopener'), i * 100);
+    });
   });
 });
