@@ -310,7 +310,22 @@ function parseCookidooFormat(text) {
       i += 1;
     }
   }
-  return pairs.length >= 2 ? pairs.join('\n') : null;
+  if (pairs.length >= 2) return pairs.join('\n');
+
+  // Non-indented name-first format: "name amount [unit]" on a single line
+  const nameFirst = trimmed.filter(l => !/^\d/.test(l) && DESKTOP_AMT_RE.test(l));
+  if (nameFirst.length >= 2) {
+    return nameFirst.map(l => {
+      const m = l.match(DESKTOP_AMT_RE);
+      const name    = m[1].trim();
+      const numPart = m[2] + (m[3] ? ' ' + m[3] : '');
+      const unit    = m[4] || '';
+      const amt     = normalizeCookidooAmount(numPart);
+      return `${amt}${unit ? ' ' + unit : ''} ${name}`;
+    }).join('\n');
+  }
+
+  return null;
 }
 
 function extractPackInfo(product) {
