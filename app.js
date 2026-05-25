@@ -265,7 +265,7 @@ function normalizeCookidooAmount(s) {
   return s.trim();
 }
 
-const DESKTOP_AMT_RE = /^(.+?)\s+([½¼¾⅓⅔⅛]|\d[\d.,]*(?:\s*-\s*\d[\d.,]*)?)\s*([½¼¾⅓⅔⅛])?\s*([a-zA-Zæøå]+)?\s*$/;
+const DESKTOP_AMT_RE = /^(.+?)\s+([½¼¾⅓⅔⅛]|\d[\d.,]*(?:\s*-\s*\d[\d.,]*)?)\s*([½¼¾⅓⅔⅛])?\s*([a-zA-Zæøå]+)?\.?\s*$/;
 
 function parseCookidooDesktopFormat(lines) {
   const result = [];
