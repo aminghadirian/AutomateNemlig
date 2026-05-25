@@ -104,7 +104,8 @@ textarea {
   margin-top: 5px;
 }
 
-button#findBtn {
+button#findBtn,
+button#openSearchBtn {
   width: 100%;
   background: var(--green);
   color: #fff;
@@ -116,8 +117,10 @@ button#findBtn {
   cursor: pointer;
   transition: background .15s;
 }
-button#findBtn:hover { background: var(--green-light); }
-button#findBtn:disabled { background: #aaa; cursor: not-allowed; }
+button#findBtn:hover,
+button#openSearchBtn:hover { background: var(--green-light); }
+button#findBtn:disabled,
+button#openSearchBtn:disabled { background: #aaa; cursor: not-allowed; }
 
 #statusBar {
   font-size: .88rem;
@@ -197,11 +200,13 @@ td a:hover { text-decoration: underline; }
 /* Progress indicator */
 @keyframes spin { to { transform: rotate(360deg); } }
 
-button#findBtn.loading {
+button#findBtn.loading,
+button#openSearchBtn.loading {
   background: #888;
   cursor: not-allowed;
 }
-button#findBtn.loading::before {
+button#findBtn.loading::before,
+button#openSearchBtn.loading::before {
   content: '';
   display: inline-block;
   width: 13px; height: 13px;
@@ -235,8 +240,7 @@ button#findBtn.loading::before {
 #log a     { color: var(--green); text-decoration: underline; }
 
 button#cookidooBtn,
-button#openResultsBtn,
-button#openSearchBtn {
+button#openResultsBtn {
   width: 100%;
   margin-top: 12px;
   background: #fff;
@@ -250,14 +254,11 @@ button#openSearchBtn {
   transition: background .15s, color .15s;
 }
 button#cookidooBtn:hover,
-button#openResultsBtn:hover,
-button#openSearchBtn:hover { background: var(--green-pale); }
+button#openResultsBtn:hover { background: var(--green-pale); }
 button#cookidooBtn:disabled,
-button#openResultsBtn:disabled,
-button#openSearchBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
+button#openResultsBtn:disabled { border-color: #aaa; color: #aaa; cursor: not-allowed; }
 button#cookidooBtn.loading::before,
-button#openResultsBtn.loading::before,
-button#openSearchBtn.loading::before {
+button#openResultsBtn.loading::before {
   content: '';
   display: inline-block;
   width: 13px; height: 13px;
