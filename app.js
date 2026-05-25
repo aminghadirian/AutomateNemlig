@@ -256,13 +256,48 @@ function parseShoppingLine(line) {
   return { amount, unit, amountBase, unitType, name };
 }
 
+const FRACTIONS = {'½':'0.5','¼':'0.25','¾':'0.75','⅓':'0.33','⅔':'0.67','⅛':'0.125'};
+
+function normalizeCookidooAmount(s) {
+  for (const [f, v] of Object.entries(FRACTIONS)) s = s.replaceAll(f, v);
+  s = s.replace(/(\d+)\s+(0\.\d+)/, (_, a, b) => String(parseFloat(a) + parseFloat(b)));
+  s = s.replace(/(\d+(?:\.\d+)?)\s*-\s*\d+(?:\.\d+)?/, '$1');
+  return s.trim();
+}
+
+const DESKTOP_AMT_RE = /^(.+?)\s+([½¼¾⅓⅔⅛]|\d[\d.,]*(?:\s*-\s*\d[\d.,]*)?)\s*([½¼¾⅓⅔⅛])?\s*([a-zA-Zæøå]+)?\s*$/;
+
+function parseCookidooDesktopFormat(lines) {
+  const result = [];
+  for (const raw of lines) {
+    if (!/^\s/.test(raw) || !raw.trim()) continue;
+    const m = raw.trim().match(DESKTOP_AMT_RE);
+    if (!m) continue;
+    const name    = m[1].trim();
+    const numPart = m[2] + (m[3] ? ' ' + m[3] : '');
+    const unit    = m[4] || '';
+    const amt     = normalizeCookidooAmount(numPart);
+    result.push(`${amt}${unit ? ' ' + unit : ''} ${name}`);
+  }
+  return result.length >= 2 ? result.join('\n') : null;
+}
+
 function parseCookidooFormat(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = text.split('\n');
+
+  // Desktop format: indented lines with digits or fractions
+  const indentedWithAmt = lines.filter(l => /^\s+/.test(l) && /\d|[½¼¾⅓⅔⅛]/.test(l));
+  if (indentedWithAmt.length >= 2) {
+    return parseCookidooDesktopFormat(lines);
+  }
+
+  // Mobile format: name and amount on consecutive lines
+  const trimmed = lines.map(l => l.trim()).filter(Boolean);
   const pairs = [];
   let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    const next = lines[i + 1];
+  while (i < trimmed.length) {
+    const line = trimmed[i];
+    const next = trimmed[i + 1];
     const lineIsName   = !/^\d/.test(line);
     const nextIsAmount = next && /^\d/.test(next);
     if (lineIsName && nextIsAmount) {
