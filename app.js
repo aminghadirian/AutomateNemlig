@@ -633,6 +633,7 @@ function openSearchTabs() {
     const term = toDanish(parsed ? parsed.name : line);
     window.open(`${BASE}/forside?search=${encodeURIComponent(term)}`, '_blank', 'noopener');
   }
+  showBanner('Tabs opened — if nothing appeared, allow pop-ups for this page in your browser.', 'info');
 }
 
 // ── Reformat + translate ───────────────────────────────────────────────────────
@@ -703,8 +704,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
   document.getElementById('openResultsBtn').addEventListener('click', () => {
-    lastRows.forEach((r, i) => {
-      if (r.best.url) setTimeout(() => window.open(r.best.url, '_blank', 'noopener'), i * 100);
-    });
+    let opened = 0;
+    for (const r of lastRows) {
+      if (r.best.url) { window.open(r.best.url, '_blank', 'noopener'); opened++; }
+    }
+    if (opened) showBanner('Tabs opened — if nothing appeared, allow pop-ups for this page in your browser.', 'info');
   });
 });
