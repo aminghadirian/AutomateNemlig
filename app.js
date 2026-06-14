@@ -621,6 +621,25 @@ function renderResults(rows, skipped) {
 }
 
 // ── Open search tabs ───────────────────────────────────────────────────────────
+function showLinksPanel(title, items) {
+  const panel = document.getElementById('linksPanel');
+  document.getElementById('linksPanelTitle').textContent = title;
+  const ul = document.getElementById('linksList');
+  ul.innerHTML = '';
+  for (const { label, url } of items) {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = label;
+    li.appendChild(a);
+    ul.appendChild(li);
+  }
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function openSearchTabs() {
   const lines = document.getElementById('list').value
     .split('\n').map(l => l.trim()).filter(Boolean);
@@ -628,12 +647,12 @@ function openSearchTabs() {
     showBanner('Enter items in the shopping list first.', 'warning');
     return;
   }
-  for (const line of lines) {
+  const items = lines.map(line => {
     const parsed = parseShoppingLine(line);
     const term = toDanish(parsed ? parsed.name : line);
-    window.open(`${BASE}/forside?search=${encodeURIComponent(term)}`, '_blank', 'noopener');
-  }
-  showBanner('Tabs opened — if nothing appeared, allow pop-ups for this page in your browser.', 'info');
+    return { label: term, url: `${BASE}/forside?search=${encodeURIComponent(term)}` };
+  });
+  showLinksPanel('Nemlig searches — click each to open', items);
 }
 
 // ── Reformat + translate ───────────────────────────────────────────────────────
@@ -704,10 +723,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('findBtn').addEventListener('click', run);
   document.getElementById('openSearchBtn').addEventListener('click', openSearchTabs);
   document.getElementById('openResultsBtn').addEventListener('click', () => {
-    let opened = 0;
-    for (const r of lastRows) {
-      if (r.best.url) { window.open(r.best.url, '_blank', 'noopener'); opened++; }
-    }
-    if (opened) showBanner('Tabs opened — if nothing appeared, allow pop-ups for this page in your browser.', 'info');
+    const items = lastRows
+      .filter(r => r.best.url)
+      .map(r => ({ label: r.best.name, url: r.best.url }));
+    showLinksPanel('Cheapest results — click each to open', items);
   });
 });
